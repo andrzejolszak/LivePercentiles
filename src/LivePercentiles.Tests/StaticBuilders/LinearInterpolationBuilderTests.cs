@@ -22,7 +22,7 @@ namespace LivePercentiles.Tests.StaticBuilders
             }
         }
 
-        private readonly Expectation[] _testExpectations =
+        private static readonly Expectation[] _testExpectations =
         {
             new Expectation
             {

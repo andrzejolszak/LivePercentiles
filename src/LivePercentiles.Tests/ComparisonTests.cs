@@ -7,6 +7,7 @@ using LivePercentiles.StaticBuilders;
 using LivePercentiles.StreamingBuilders;
 using LivePercentiles.Tests.Extensions;
 using NUnit.Framework;
+using System.Reflection;
 
 namespace LivePercentiles.Tests
 {
@@ -42,14 +43,14 @@ namespace LivePercentiles.Tests
             public override string ToString() { return Filename; }
         }
 
-        private SampleFile[] _sampleFiles =
+        private static SampleFile[] _sampleFiles =
         {
-            new SampleFile { Filename = "TestData/latency_sample_100" },
-            new SampleFile { Filename = "TestData/latency_sample_1000" },
-            new SampleFile { Filename = "TestData/latency_sample_10000" },
-            new SampleFile { Filename = "TestData/random_sample_100" },
-            new SampleFile { Filename = "TestData/random_sample_1000" },
-            new SampleFile { Filename = "TestData/random_sample_10000" }
+            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/latency_sample_100" },
+            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/latency_sample_1000" },
+            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/latency_sample_10000" },
+            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/random_sample_100" },
+            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/random_sample_1000" },
+            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/random_sample_10000" }
         };
 
         [Test]

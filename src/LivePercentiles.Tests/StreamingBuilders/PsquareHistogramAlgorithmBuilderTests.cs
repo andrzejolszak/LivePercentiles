@@ -23,7 +23,7 @@ namespace LivePercentiles.Tests.StreamingBuilders
             }
         }
 
-        private readonly Expectation[] _testExpectations =
+        private static readonly Expectation[] _testExpectations =
         {
             new Expectation
             {
@@ -155,14 +155,14 @@ namespace LivePercentiles.Tests.StreamingBuilders
         }
         
         [Test]
-        [Ignore]
+        [Ignore("TODO")]
         public void performance_test()
         {
             throw new NotImplementedException("Todo");
         }
 
         [Test]
-        [Ignore]
+        [Ignore("TODO")]
         public void should_handle_more_than_int_maxvalue_observations()
         {
             // TODO
