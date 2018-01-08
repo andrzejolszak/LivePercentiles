@@ -3,6 +3,7 @@ using BenchmarkDotNet.Attributes;
 using System;
 using LivePercentiles.StreamingBuilders;
 using HdrHistogram;
+using StatsLib;
 
 namespace LivePercentiles.Benchmarks
 {
@@ -11,7 +12,6 @@ namespace LivePercentiles.Benchmarks
     {
         private const int _few = 100;
         private const int _many = 100000;
-        private const int _allocCount = 50;
 
         private double[] _dataFewLow;
         private double[] _dataManyLow;
@@ -30,6 +30,10 @@ namespace LivePercentiles.Benchmarks
 
         private IntHistogram _hdr_low;
         private IntHistogram _hdr_high;
+
+        private TDigest _tDigest;
+        private ConstantErrorBasicCKMSBuilder _ckms_95lowPrec;
+        private ConstantErrorBasicCKMSBuilder _ckms_95highPrec;
 
         [GlobalSetup]
         public void Setup()
@@ -56,42 +60,22 @@ namespace LivePercentiles.Benchmarks
             this._p2_95Normal = new PsquareSinglePercentileAlgorithmBuilder(95, Precision.Normal);
             this._p2_99Normal = new PsquareSinglePercentileAlgorithmBuilder(99, Precision.Normal);
 
+            this._ckms_95lowPrec = new ConstantErrorBasicCKMSBuilder(0.001, new double[] { 95 });
+            this._ckms_95highPrec = new ConstantErrorBasicCKMSBuilder(0.000001, new double[] { 95 });
+
             this._hdr_low = new IntHistogram(_few + 1, 3);
             this._hdr_high = new IntHistogram(_many + 1, 3);
+
+            this._tDigest = new TDigest();
         }
 
         [Benchmark(Baseline = true, OperationsPerInvoke = _few)]
-        public long MathAbs()
+        public long MathAbs_baseline()
         {
             int res = 0;
             foreach (int e in this._dataFewLow)
             {
                 res += Math.Abs(e);
-            }
-
-            return res;
-        }
-
-        [Benchmark(OperationsPerInvoke = _allocCount)]
-        public int P2_manyHigh_alloc()
-        {
-            int res = 0;
-            for (int i = 0; i < _allocCount; i++)
-            {
-                res += new PsquareSinglePercentileAlgorithmBuilder(99, Precision.LessPreciseAndFaster).GetHashCode();
-            }
-
-            return res;
-        }
-
-
-        [Benchmark(OperationsPerInvoke = _allocCount)]
-        public int Hdr_manyHigh_alloc()
-        {
-            int res = 0;
-            for (int i = 0; i < _allocCount; i++)
-            {
-                res += new IntHistogram(_many + 1, 3).GetHashCode();
             }
 
             return res;
@@ -206,6 +190,39 @@ namespace LivePercentiles.Benchmarks
 
             return _hdr_high.TotalCount;
         }
+
+        [Benchmark(OperationsPerInvoke = _few)]
+        public int TDigest_fewLow()
+        {
+            foreach (double e in this._dataFewLow)
+            {
+                this._tDigest.Add(e);
+            }
+
+            return this._tDigest.GetHashCode();
+        }
+
+        [Benchmark(OperationsPerInvoke = _few)]
+        public int Ckms_95lowPrec_fewLow()
+        {
+            foreach (double e in this._dataFewLow)
+            {
+                this._ckms_95lowPrec.AddValue(e);
+            }
+
+            return this._ckms_95lowPrec.GetHashCode();
+        }
+
+        [Benchmark(OperationsPerInvoke = _few)]
+        public int Ckms_95highPrec_fewLow()
+        {
+            foreach (double e in this._dataFewLow)
+            {
+                this._ckms_95highPrec.AddValue(e);
+            }
+
+            return this._ckms_95highPrec.GetHashCode();
+        }
     }
 
     /*
@@ -222,20 +239,21 @@ Jit=RyuJit  Platform=X64  Runtime=Clr
 Server=True  LaunchCount=1  RunStrategy=ColdStart
 TargetCount=40  UnrollFactor=1  WarmupCount=1
 
-             Method |         Mean |       Error |      StdDev |       Median | Scaled | ScaledSD | Allocated |
-------------------- |-------------:|------------:|------------:|-------------:|-------:|---------:|----------:|
-            MathAbs |     4.042 ns |   0.8251 ns |   1.4233 ns |     2.844 ns |   1.00 |     0.00 |       0 B |
-  P2_manyHigh_alloc |    78.669 ns |   6.4222 ns |  10.5518 ns |    73.956 ns |  21.83 |     7.47 |     174 B |
- Hdr_manyHigh_alloc | 1,754.075 ns | 241.0969 ns | 382.4052 ns | 1,763.557 ns | 486.85 |   187.53 |   32988 B |
- P2_95Normal_fewLow |   184.336 ns |  20.0484 ns |  33.4964 ns |   197.689 ns |  51.16 |    18.66 |       0 B |
- P2_99Normal_fewLow |   161.288 ns |  22.2047 ns |  37.7052 ns |   150.756 ns |  44.77 |    17.69 |       0 B |
-   P2_95Fast_fewLow |   126.541 ns |  15.4023 ns |  26.9759 ns |   125.156 ns |  35.12 |    13.44 |       0 B |
-   P2_99Fast_fewLow |   131.069 ns |  14.2234 ns |  24.5347 ns |   142.222 ns |  36.38 |    13.38 |       0 B |
- P2_95Fast_manyHigh |    96.814 ns |   3.5479 ns |   6.1199 ns |    95.030 ns |  26.87 |     8.58 |       0 B |
- P2_99Fast_manyHigh |    93.240 ns |   7.6073 ns |  12.4991 ns |    90.320 ns |  25.88 |     8.85 |       0 B |
-         Hdr_fewLow |    15.345 ns |   0.9804 ns |   1.6912 ns |    14.222 ns |   4.26 |     1.42 |       0 B |
-        Hdr_manyLow |     8.796 ns |   0.4852 ns |   0.8370 ns |     8.677 ns |   2.44 |     0.80 |       0 B |
-        Hdr_fewHigh |    19.834 ns |   1.3381 ns |   2.2722 ns |    19.911 ns |   5.51 |     1.84 |       0 B |
-       Hdr_manyHigh |    12.604 ns |   1.1513 ns |   2.0164 ns |    11.975 ns |   3.50 |     1.24 |       0 B |
+                 Method |         Mean |         Error |       StdDev |       Median |   Scaled | ScaledSD | Allocated |
+----------------------- |-------------:|--------------:|-------------:|-------------:|---------:|---------:|----------:|
+       MathAbs_baseline |     3.743 ns |     0.7768 ns |     1.340 ns |     2.844 ns |     1.00 |     0.00 |       0 B |
+     P2_95Normal_fewLow |   145.843 ns |    18.3997 ns |    29.184 ns |   128.000 ns |    43.18 |    14.83 |       0 B |
+     P2_99Normal_fewLow |   148.170 ns |    20.9349 ns |    33.205 ns |   128.000 ns |    43.87 |    15.73 |       0 B |
+       P2_95Fast_fewLow |   155.124 ns |     3.3486 ns |     4.802 ns |   156.445 ns |    45.93 |    12.76 |       0 B |
+       P2_99Fast_fewLow |   118.282 ns |    15.5149 ns |    25.922 ns |   105.245 ns |    35.02 |    12.45 |       0 B |
+     P2_95Fast_manyHigh |    91.783 ns |     6.5257 ns |    11.081 ns |    90.220 ns |    27.17 |     8.22 |       0 B |
+     P2_99Fast_manyHigh |    92.066 ns |     8.6573 ns |    14.701 ns |    85.632 ns |    27.26 |     8.74 |       0 B |
+             Hdr_fewLow |    14.821 ns |     0.9514 ns |     1.641 ns |    14.222 ns |     4.39 |     1.31 |       0 B |
+            Hdr_manyLow |     9.541 ns |     1.0625 ns |     1.861 ns |     9.418 ns |     2.82 |     0.96 |       0 B |
+            Hdr_fewHigh |    19.279 ns |     1.0060 ns |     1.681 ns |    19.911 ns |     5.71 |     1.66 |       0 B |
+           Hdr_manyHigh |    12.395 ns |     1.5568 ns |     2.727 ns |    11.745 ns |     3.67 |     1.31 |       0 B |
+         TDigest_fewLow | 4,460.615 ns |   564.8650 ns |   974.364 ns | 4,632.180 ns | 1,320.59 |   469.09 |     901 B |
+  Ckms_95lowPrec_fewLow | 4,608.148 ns | 1,770.2047 ns | 3,100.371 ns | 4,150.047 ns | 1,364.27 | 1,012.53 |      95 B |
+ Ckms_95highPrec_fewLow | 5,160.574 ns | 2,133.1773 ns | 3,679.626 ns | 4,145.780 ns | 1,527.82 | 1,192.20 |      98 B |
      */
 }
