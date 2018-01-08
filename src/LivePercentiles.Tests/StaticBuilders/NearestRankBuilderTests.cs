@@ -182,9 +182,9 @@ namespace LivePercentiles.Tests.StaticBuilders
 
         private static SampleFile[] _sampleFiles =
         {
-            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "/TestData/latency_sample_100", ExpectedValues = new[] { 73, 80, 125, 269, 269, 269 } },
-            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "/TestData/latency_sample_1000", ExpectedValues = new[] { 75, 82, 183, 320, 659, 659 } },
-            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "/TestData/latency_sample_10000", ExpectedValues = new[] { 75, 82, 177, 342, 551, 603 } }
+            new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "/TestData/latency_sample_100", ExpectedValues = new[] { 73, 80, 125, 269, 269, 269 } },
+            new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "/TestData/latency_sample_1000", ExpectedValues = new[] { 75, 82, 183, 320, 659, 659 } },
+            new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "/TestData/latency_sample_10000", ExpectedValues = new[] { 75, 82, 177, 342, 551, 603 } }
         };
 
         [Test]

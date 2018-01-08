@@ -45,12 +45,12 @@ namespace LivePercentiles.Tests
 
         private static SampleFile[] _sampleFiles =
         {
-            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/latency_sample_100" },
-            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/latency_sample_1000" },
-            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/latency_sample_10000" },
-            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/random_sample_100" },
-            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/random_sample_1000" },
-            new SampleFile { Filename = Assembly.GetCallingAssembly().Location + "TestData/random_sample_10000" }
+            new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "TestData/latency_sample_100" },
+            new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "TestData/latency_sample_1000" },
+            new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "TestData/latency_sample_10000" },
+            new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "TestData/random_sample_100" },
+            new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "TestData/random_sample_1000" },
+            new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "TestData/random_sample_10000" }
         };
 
         [Test]
