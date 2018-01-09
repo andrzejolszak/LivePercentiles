@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace LivePercentiles.StreamingBuilders
 {
@@ -11,12 +11,10 @@ namespace LivePercentiles.StreamingBuilders
     /// </summary>
     public abstract class BasePsquareBuilder
     {
+        protected List<double> _startupQueue;
         protected long _observationsCount;
+        protected Marker[] _markers = new Marker[0];
         private bool _isInitialized;
-        
-        protected readonly List<double> _startupQueue = new List<double>();
-        protected List<Marker> _markers = new List<Marker>();
-
         protected bool IsInitialized { get { return _isInitialized; } }
 
         public void AddValue(double value)
@@ -29,6 +27,39 @@ namespace LivePercentiles.StreamingBuilders
                 NormalPhase(value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static double ComputePsquareValueForMarker(Marker previousMarker, Marker currentMarker, Marker nextMarker, int markerShift)
+        {
+            double ratioBetweenPreviousAndNextPosition = (double)markerShift / (nextMarker.Position - previousMarker.Position);
+            int distanceBetweenPreviousAndNewPosition = currentMarker.Position - previousMarker.Position + markerShift;
+            double differenceBetweenNextAndCurrentValue = nextMarker.Value - currentMarker.Value;
+            int differenceBetweenNextAndCurrentPosition = nextMarker.Position - currentMarker.Position;
+            int distanceBetweenNextAndNewPosition = nextMarker.Position - currentMarker.Position - markerShift;
+            double differenceBetweenPreviousAndCurrentValue = currentMarker.Value - previousMarker.Value;
+            int differenceBetweenPreviousAndCurrentPosition = currentMarker.Position - previousMarker.Position;
+
+            return currentMarker.Value
+                   + ratioBetweenPreviousAndNextPosition
+                   * (distanceBetweenPreviousAndNewPosition * (differenceBetweenNextAndCurrentValue / differenceBetweenNextAndCurrentPosition)
+                      + distanceBetweenNextAndNewPosition * (differenceBetweenPreviousAndCurrentValue / differenceBetweenPreviousAndCurrentPosition));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected static double ComputeLinearValueForMarker(Marker previousMarker, Marker currentMarker, Marker nextMarker, int markerShift)
+        {
+            Marker otherMarker = markerShift < 0 ? previousMarker : nextMarker;
+            double differenceBetweenOtherAndCurrentValue = otherMarker.Value - currentMarker.Value;
+            int differenceBetweenOtherAndCurrentPosition = otherMarker.Position - currentMarker.Position;
+
+            return currentMarker.Value + markerShift * (differenceBetweenOtherAndCurrentValue / differenceBetweenOtherAndCurrentPosition);
+        }
+
+        protected abstract bool IsReadyForNormalPhase();
+
+        protected abstract void InitializeMarkers();
+
+        protected abstract void RecomputeNonExtremeMarkersValuesIfNecessary();
+
         private void StartupPhase(double value)
         {
             _startupQueue.Add(value);
@@ -39,79 +70,46 @@ namespace LivePercentiles.StreamingBuilders
             _isInitialized = true;
         }
 
-        protected abstract bool IsReadyForNormalPhase();
-
-        protected abstract void InitializeMarkers();
-
         private void NormalPhase(double value)
         {
             var containingBucketIndex = FindContainingBucket(value);
-            IncrementImpactedMarkersPositions(containingBucketIndex + 1);
+
+            for (var i = containingBucketIndex + 1; i < _markers.Length; i++)
+                _markers[i].IncrementPosition();
+
             RecomputeNonExtremeMarkersValuesIfNecessary();
 
             // TODO: Remove after thorough testing
-            if (_observationsCount != _markers.Last().Position)
+            if (_observationsCount != _markers[_markers.Length - 1].Position)
                 throw new InvalidOperationException("That can't be !");
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int FindContainingBucket(double value)
         {
-            if (value < _markers.First().Value)
+            if (value < _markers[0].Value)
             {
-                _markers.First().Value = value;
+                _markers[0].Value = value;
                 return 0;
             }
 
-            for (var i = 0; i < _markers.Count - 2; ++i)
+            for (var i = 0; i < _markers.Length - 2; ++i)
             {
                 if (_markers[i].Value <= value && value < _markers[i + 1].Value)
                     return i;
             }
 
             // TODO: simplify
-            if (_markers[_markers.Count - 2].Value <= value && value <= _markers[_markers.Count - 1].Value)
-                return _markers.Count - 2;
+            if (_markers[_markers.Length - 2].Value <= value && value <= _markers[_markers.Length - 1].Value)
+                return _markers.Length - 2;
 
-            if (value > _markers.Last().Value)
+            if (value > _markers[_markers.Length - 1].Value)
             {
-                _markers.Last().Value = value;
-                return _markers.Count - 2;
+                _markers[_markers.Length - 1].Value = value;
+                return _markers.Length - 2;
             }
 
             throw new InvalidOperationException("Should not happen");
-        }
-
-        private void IncrementImpactedMarkersPositions(int firstImpactedBucketIndex)
-        {
-            for (var i = firstImpactedBucketIndex; i < _markers.Count; i++)
-                _markers[i].IncrementPosition();
-        }
-
-        protected abstract void RecomputeNonExtremeMarkersValuesIfNecessary();
-        
-        internal static double ComputePsquareValueForMarker(Marker previousMarker, Marker currentMarker, Marker nextMarker, int markerShift)
-        {
-            var ratioBetweenPreviousAndNextPosition = (double)markerShift / (nextMarker.Position - previousMarker.Position);
-            var distanceBetweenPreviousAndNewPosition = currentMarker.Position - previousMarker.Position + markerShift;
-            var differenceBetweenNextAndCurrentValue = nextMarker.Value - currentMarker.Value;
-            var differenceBetweenNextAndCurrentPosition = nextMarker.Position - currentMarker.Position;
-            var distanceBetweenNextAndNewPosition = nextMarker.Position - currentMarker.Position - markerShift;
-            var differenceBetweenPreviousAndCurrentValue = currentMarker.Value - previousMarker.Value;
-            var differenceBetweenPreviousAndCurrentPosition = currentMarker.Position - previousMarker.Position;
-
-            return currentMarker.Value
-                   + ratioBetweenPreviousAndNextPosition
-                   * (distanceBetweenPreviousAndNewPosition * (differenceBetweenNextAndCurrentValue / differenceBetweenNextAndCurrentPosition)
-                      + distanceBetweenNextAndNewPosition * (differenceBetweenPreviousAndCurrentValue / differenceBetweenPreviousAndCurrentPosition));
-        }
-
-        protected static double ComputeLinearValueForMarker(Marker previousMarker, Marker currentMarker, Marker nextMarker, int markerShift)
-        {
-            var otherMarker = markerShift < 0 ? previousMarker : nextMarker;
-            var differenceBetweenOtherAndCurrentValue = otherMarker.Value - currentMarker.Value;
-            var differenceBetweenOtherAndCurrentPosition = otherMarker.Position - currentMarker.Position;
-
-            return currentMarker.Value + markerShift * (differenceBetweenOtherAndCurrentValue / differenceBetweenOtherAndCurrentPosition);
         }
     }
 }

@@ -24,7 +24,22 @@ namespace LivePercentiles.StaticBuilders
             _values.Add(value);
         }
 
-        public IEnumerable<Percentile> GetPercentiles()
+        public Percentile[] GetPercentiles()
+        {
+            return DoGetPercentiles().ToArray();
+        }
+
+        private static int GetPercentRankUnderDesiredPercentile(List<RankedValue> rankedValues, double desiredPercentile)
+        {
+            for (var i = 0; i < rankedValues.Count; ++i)
+            {
+                if (rankedValues[i].PercentRank > desiredPercentile)
+                    return i - 1;
+            }
+            return rankedValues.Count - 1;
+        }
+
+        private IEnumerable<Percentile> DoGetPercentiles()
         {
             if (!_values.Any())
                 yield break;
@@ -60,26 +75,16 @@ namespace LivePercentiles.StaticBuilders
             }
         }
 
-        private static int GetPercentRankUnderDesiredPercentile(List<RankedValue> rankedValues, double desiredPercentile)
-        {
-            for (var i = 0; i < rankedValues.Count; ++i)
-            {
-                if (rankedValues[i].PercentRank > desiredPercentile)
-                    return i - 1;
-            }
-            return rankedValues.Count - 1;
-        }
-
         private class RankedValue
         {
-            public double Value { get; set; }
-            public double PercentRank { get; set; }
-
             public RankedValue(double percentRank, double value)
             {
                 PercentRank = percentRank;
                 Value = value;
             }
+
+            public double Value { get; set; }
+            public double PercentRank { get; set; }
         }
     }
 }

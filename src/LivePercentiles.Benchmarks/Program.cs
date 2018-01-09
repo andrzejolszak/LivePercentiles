@@ -6,6 +6,7 @@ using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Environments;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
+using LivePercentiles.StreamingBuilders;
 
 namespace LivePercentiles.Benchmarks
 {
@@ -13,6 +14,13 @@ namespace LivePercentiles.Benchmarks
     {
         public static void Main(string[] args)
         {
+            //// Profiler
+            //var obj = new PsquareSinglePercentileAlgorithmBuilder(99, Precision.LessPreciseAndFaster);
+            //for(int i = 0; i < 10000000; i++)
+            //{
+            //    obj.AddValue(i);
+            //}
+
             Console.SetWindowSize(140, 40);
 
             Type[] benchmarks = Assembly.GetExecutingAssembly().GetTypes()

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LivePercentiles.StreamingBuilders
 {
@@ -39,8 +40,14 @@ namespace LivePercentiles.StreamingBuilders
                 for (var i = 0; i < index; ++i)
                     previousBucketTrueRankLowerBound += _buckets[i].Gi;
                 // Not removing 1 from Delta to make it work
-                _buckets.Insert(index, new Bucket(value, 1, (int)Math.Floor(GetAllowableBucketSpread(previousBucketTrueRankLowerBound, _count + 1)) ));}
+                _buckets.Insert(index, new Bucket(value, 1, (int)Math.Floor(GetAllowableBucketSpread(previousBucketTrueRankLowerBound, _count + 1))));
+            }
             ++_count;
+        }
+
+        public Percentile[] GetPercentiles()
+        {
+            return DoGetPercentiles().ToArray();
         }
 
         /// <summary>
@@ -54,12 +61,12 @@ namespace LivePercentiles.StreamingBuilders
             // Use size instead of count?
             return 2 * _precision * totalEntriesCount;
         }
-        
-        public IEnumerable<Percentile> GetPercentiles()
+
+        private IEnumerable<Percentile> DoGetPercentiles()
         {
             foreach (var desiredPercentile in _desiredPercentiles)
             {
-                var targetIndex = (int) (desiredPercentile / 100 * _count);
+                var targetIndex = (int)(desiredPercentile / 100 * _count);
                 var targetIndexAccountingForError = targetIndex + GetAllowableBucketSpread(targetIndex, _count) / 2;
 
                 Bucket previous = null;
@@ -83,19 +90,20 @@ namespace LivePercentiles.StreamingBuilders
 
     public class Bucket
     {
-        public double ActualValue { get; set; }
-        public int Gi { get; set; }
-        /// <summary>
-        /// Range of the bucket
-        /// </summary>
-        public int Delta { get; set; }
-
         public Bucket(double actualValue, int gi, int delta)
         {
             ActualValue = actualValue;
             Gi = gi;
             Delta = delta;
         }
+
+        public double ActualValue { get; set; }
+        public int Gi { get; set; }
+
+        /// <summary>
+        /// Range of the bucket
+        /// </summary>
+        public int Delta { get; set; }
 
         public override string ToString()
         {

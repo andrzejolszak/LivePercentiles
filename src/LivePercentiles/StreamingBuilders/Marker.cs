@@ -1,4 +1,6 @@
-﻿namespace LivePercentiles.StreamingBuilders
+﻿using System.Runtime.CompilerServices;
+
+namespace LivePercentiles.StreamingBuilders
 {
     public class Marker
     {
@@ -6,6 +8,7 @@
         public double Value { get; set; }
         public double Percentile { get; set; }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IncrementPosition()
         {
             Position = Position + 1;

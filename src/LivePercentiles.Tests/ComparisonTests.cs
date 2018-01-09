@@ -5,46 +5,14 @@ using System.IO;
 using System.Linq;
 using LivePercentiles.StaticBuilders;
 using LivePercentiles.StreamingBuilders;
-using LivePercentiles.Tests.Extensions;
 using NUnit.Framework;
-using System.Reflection;
 
 namespace LivePercentiles.Tests
 {
     public class ComparisonTests
     {
-        // TODO: make this a real thing and test it
-        class CombinedPsquareSinglePercentileAlgorithmBuilder : IPercentileBuilder
-        {
-            private List<PsquareSinglePercentileAlgorithmBuilder> _innerBuilders;
-
-            public CombinedPsquareSinglePercentileAlgorithmBuilder(double[] desiredPercentiles, Precision precision = Constants.DefaultPrecision)
-            {
-                _innerBuilders = desiredPercentiles.Select(p => new PsquareSinglePercentileAlgorithmBuilder(p, precision)).ToList();
-            }
-
-            public void AddValue(double value)
-            {
-                foreach (var builder in _innerBuilders)
-                    builder.AddValue(value);
-            }
-
-            public IEnumerable<Percentile> GetPercentiles()
-            {
-                return _innerBuilders.Select(b => b.GetPercentiles().Single());
-            }
-        }
-
-        public class SampleFile
-        {
-            public string Filename { get; set; }
-            public int[] ExpectedValues { get; set; }
-
-            public override string ToString() { return Filename; }
-        }
-
         private static SampleFile[] _sampleFiles =
-        {
+                {
             new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "TestData/latency_sample_100" },
             new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "TestData/latency_sample_1000" },
             new SampleFile { Filename = AppDomain.CurrentDomain.BaseDirectory + "TestData/latency_sample_10000" },
@@ -76,7 +44,7 @@ namespace LivePercentiles.Tests
 
             Console.WriteLine("Percentile;" + string.Join(";", builders.Select(x => x.Item1)));
             foreach (var desiredPercentile in desiredPercentiles)
-                Console.WriteLine(desiredPercentile + ";" + string.Join(";", builders.Select(x => (int) x.Item2.GetPercentiles().Single(p => p.Rank == desiredPercentile).Value)));
+                Console.WriteLine(desiredPercentile + ";" + string.Join(";", builders.Select(x => (int)x.Item2.GetPercentiles().Single(p => p.Rank == desiredPercentile).Value)));
             Console.Write("MSE to Nearest rank");
             foreach (var builder in builders)
             {
@@ -88,6 +56,45 @@ namespace LivePercentiles.Tests
             Console.WriteLine("Hdr estimated size: " + ((HdrHistogramBuilder)builders.Last().Item2).GetEstimatedSize());
             Console.WriteLine("P² (fast) estimated size: 200");
             Console.WriteLine("P² (normal) estimated size: 270");
+            Console.WriteLine("Hdr estimated size: " + (new HdrHistogramBuilder(Int32.MaxValue, 0, new[] { 90d, 95d, 99d }).GetEstimatedSize()));
+        }
+
+        public class SampleFile
+        {
+            public string Filename { get; set; }
+            public int[] ExpectedValues { get; set; }
+
+            public override string ToString()
+            {
+                return Filename;
+            }
+        }
+
+        // TODO: make this a real thing and test it
+        private class CombinedPsquareSinglePercentileAlgorithmBuilder : IPercentileBuilder
+        {
+            private List<PsquareSinglePercentileAlgorithmBuilder> _innerBuilders;
+
+            public CombinedPsquareSinglePercentileAlgorithmBuilder(double[] desiredPercentiles, Precision precision = Constants.DefaultPrecision)
+            {
+                _innerBuilders = desiredPercentiles.Select(p => new PsquareSinglePercentileAlgorithmBuilder(p, precision)).ToList();
+            }
+
+            public void AddValue(double value)
+            {
+                foreach (var builder in _innerBuilders)
+                    builder.AddValue(value);
+            }
+
+            public Percentile[] GetPercentiles()
+            {
+                return DoGetPercentiles().ToArray();
+            }
+
+            private IEnumerable<Percentile> DoGetPercentiles()
+            {
+                return _innerBuilders.Select(b => b.GetPercentiles().Single());
+            }
         }
     }
 }

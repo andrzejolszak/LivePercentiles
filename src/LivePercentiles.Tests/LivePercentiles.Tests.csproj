@@ -34,8 +34,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="HdrHistogram.NET">
-      <HintPath>..\..\lib\HdrHistogram.NET.dll</HintPath>
+    <Reference Include="HdrHistogram, Version=2.5.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\HdrHistogram.2.5.0\lib\net45\HdrHistogram.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="KellermanSoftware.Compare-NET-Objects">
       <HintPath>..\packages\CompareNETObjects.3.02.0.0\lib\net45\KellermanSoftware.Compare-NET-Objects.dll</HintPath>

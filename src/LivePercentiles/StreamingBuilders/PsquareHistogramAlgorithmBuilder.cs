@@ -5,7 +5,7 @@ using System.Linq;
 namespace LivePercentiles.StreamingBuilders
 {
     /// <summary>
-    /// Implementation using the P² histogram algorithm described in 
+    /// Implementation using the P² histogram algorithm described in
     /// Jain & Chlamtac's 1985 paper.
     /// A number of "buckets" must be provided in the constructor,
     /// passing "5" will result in the algorithm calculating the
@@ -19,13 +19,19 @@ namespace LivePercentiles.StreamingBuilders
     {
         private readonly int _bucketCount;
         private readonly double[] _desiredPercentiles;
-        
+
         public PsquareHistogramAlgorithmBuilder(int bucketCount = Constants.DefaultBucketCount)
         {
             if (bucketCount < 4)
                 throw new ArgumentException("At least four buckets should be provided to obtain meaningful estimates.", "bucketCount");
             _bucketCount = bucketCount;
             _desiredPercentiles = Enumerable.Range(1, _bucketCount - 1).Select(i => 100d / _bucketCount * i).ToArray();
+            _startupQueue = new List<double>(_desiredPercentiles.Length + 2);
+        }
+
+        public Percentile[] GetPercentiles()
+        {
+            return DoGetPercentiles().ToArray();
         }
 
         protected override bool IsReadyForNormalPhase()
@@ -42,12 +48,12 @@ namespace LivePercentiles.StreamingBuilders
                 if (i == _startupQueue.Count - 1)
                     return new Marker(i + 1, x, double.NaN);
                 return new Marker(i + 1, x, _desiredPercentiles[i - 1]);
-            }).ToList();
+            }).ToArray();
         }
 
         protected override void RecomputeNonExtremeMarkersValuesIfNecessary()
         {
-            for (var i = 1; i < _markers.Count - 1; ++i)
+            for (var i = 1; i < _markers.Length - 1; ++i)
             {
                 var desiredPosition = 1 + i * (_observationsCount - 1.0) / _bucketCount;
 
@@ -68,7 +74,7 @@ namespace LivePercentiles.StreamingBuilders
             }
         }
 
-        public IEnumerable<Percentile> GetPercentiles()
+        private IEnumerable<Percentile> DoGetPercentiles()
         {
             return _markers.Skip(1).Take(_desiredPercentiles.Length).Select(x => new Percentile(x.Percentile, x.Value));
         }

@@ -1,5 +1,6 @@
-﻿using HdrHistogram.NET;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
+using HdrHistogram;
 
 namespace LivePercentiles.Tests
 {
@@ -8,31 +9,36 @@ namespace LivePercentiles.Tests
     /// </summary>
     public class HdrHistogramBuilder : IPercentileBuilder
     {
-        private readonly Histogram _histogram;
+        private readonly IntHistogram _histogram;
         private readonly double[] _desiredPercentiles;
 
         public HdrHistogramBuilder(int highestTrackableValue, int numberOfSignificantValueDigits, double[] desiredPercentiles = null)
         {
             _desiredPercentiles = desiredPercentiles ?? Constants.DefaultPercentiles;
-            _histogram = new Histogram(highestTrackableValue, numberOfSignificantValueDigits);
+            _histogram = new IntHistogram(highestTrackableValue, numberOfSignificantValueDigits);
         }
 
         public void AddValue(double value)
         {
-            _histogram.recordValue((long)value);
+            _histogram.RecordValue((long)value);
         }
 
-        public IEnumerable<Percentile> GetPercentiles()
+        public Percentile[] GetPercentiles()
         {
-            foreach (var desiredPercentile in _desiredPercentiles)
-            {
-                yield return new Percentile(desiredPercentile, _histogram.getValueAtPercentile(desiredPercentile));
-            }
+            return DoGetPercentiles().ToArray();
         }
 
         public int GetEstimatedSize()
         {
-            return _histogram.getEstimatedFootprintInBytes();
+            return _histogram.GetEstimatedFootprintInBytes();
+        }
+
+        private IEnumerable<Percentile> DoGetPercentiles()
+        {
+            foreach (var desiredPercentile in _desiredPercentiles)
+            {
+                yield return new Percentile(desiredPercentile, _histogram.GetValueAtPercentile(desiredPercentile));
+            }
         }
     }
 }

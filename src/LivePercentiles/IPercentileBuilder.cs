@@ -1,10 +1,9 @@
-﻿using System.Collections.Generic;
-
-namespace LivePercentiles
+﻿namespace LivePercentiles
 {
     public interface IPercentileBuilder
     {
         void AddValue(double value);
-        IEnumerable<Percentile> GetPercentiles();
+
+        Percentile[] GetPercentiles();
     }
 }
